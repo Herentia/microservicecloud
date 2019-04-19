@@ -1,5 +1,6 @@
 package com.pb.springcloud.controller;
 
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.pb.springcloud.entities.Dept;
 import com.pb.springcloud.service.DeptService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +28,19 @@ public class DeptController {
     }
 
     @GetMapping("/dept/get/{id}")
+    //一旦调用服务方法失败并抛出了错误信息后，会自动调用@HystrixCommand标注好的fallbackMethod调用类中的指定方法
+    @HystrixCommand(fallbackMethod = "processHystrix_findById")
     public Dept findById(@PathVariable("id") Long id) {
-        return deptService.findById(id);
+        Dept dept = deptService.findById(id);
+        if(null == dept) {
+            throw new RuntimeException("该ID:" + id + "没有对应的数据信息");
+        }
+        return dept;
+    }
+
+    public Dept processHystrix_findById(@PathVariable("id") Long id) {
+        return new Dept().setDeptno(id).setDname("该ID：" + id + "没有没有对应的信息,null--@HystrixCommand")
+                .setDb_source("no this database in MySQL");
     }
 
     @GetMapping("/dept/list")
